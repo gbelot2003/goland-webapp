@@ -2,40 +2,51 @@ package render
 
 import (
 	"bytes"
+	"firstwebapp/cmd/pkg/config"
 	"log"
 	"net/http"
 	"path/filepath"
 	"text/template"
 )
 
+var functions = template.FuncMap{}
+
+var app *config.AppConfig
+
+// set the config for the new templates packages
+func NewTemplates(a *config.AppConfig) {
+	app = a
+}
+
 func RenderTemplate(w http.ResponseWriter, tmpl string) {
-	// Create a template cache
-	tc, err := createTemplateCache()
-	if err != nil {
-		log.Fatal(err)
+
+	var tc map[string]*template.Template
+
+	if app.UseCache {
+		// Get the template cache from the app config
+		tc = app.TemplateCache
+	} else {
+		tc, _ = CreateTemplateCache()
 	}
 
 	//get the template from cache
 	t, ok := tc[tmpl]
 	if !ok {
-		log.Fatal(err)
+		log.Fatal("Could not get template from template cache")
 	}
 
 	buf := new(bytes.Buffer)
 
-	err = t.Execute(buf, nil)
-	if err != nil {
-		log.Println(err)
-	}
+	_ = t.Execute(buf, nil)
 
 	// render the template
-	_, err = buf.WriteTo(w)
+	_, err := buf.WriteTo(w)
 	if err != nil {
 		log.Println(err)
 	}
 }
 
-func createTemplateCache() (map[string]*template.Template, error) {
+func CreateTemplateCache() (map[string]*template.Template, error) {
 	myCache := map[string]*template.Template{}
 
 	// get all the files named *page.tmpl from ./templates
